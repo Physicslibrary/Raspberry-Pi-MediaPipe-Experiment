@@ -1,7 +1,7 @@
 # Raspberry-Pi-MediaPipe-Experiment
 Exploring MediaPipe on Raspberry Pi 4<br>
 
-<img src="handtrack.gif" width="512">
+<img src="handtrack.gif" width="360">
 
 ## Hardware
 
