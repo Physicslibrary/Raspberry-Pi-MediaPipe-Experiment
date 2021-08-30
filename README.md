@@ -3,6 +3,8 @@ Exploring MediaPipe on Raspberry Pi 4<br>
 
 <img src="handtrack.gif" width="360">
 
+The first two numbers are normalized (0-1.0) xy positions of a finger tip. The third number is an approximated z position of the hand (5 units ~ 50cm) from the camera. The fourth number is MediaPipe hand tracking at ~8fps (~13fps if no hand is detected).<br>
+
 ## Hardware
 
 Raspberry Pi 4 Model B (tested)<br>
