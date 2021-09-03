@@ -3,7 +3,7 @@ Exploring MediaPipe on Raspberry Pi 4<br>
 
 <img src="handtrack.gif" width="360">
 
-The first two numbers are normalized (0-1.0) xy positions of a finger tip. The third number is an approximated z position of the hand (5 units ~ 50cm) from the camera. The fourth number is MediaPipe hand tracking at ~8fps (~13fps if no hand is detected).<br>
+The first two numbers are normalized (0.0-1.0) xy positions of a finger tip. The third number is an approximated z position (cm) of the hand (assuming horizontal fingers) from the camera. The fourth number is MediaPipe hand tracking at ~14fps using max_num_hands=1 (~8fps for max_num_hands=2).<br>
 
 ## Hardware
 
@@ -39,7 +39,7 @@ Numpy and Pygame are already in Pi OS.<br>
 
 ## Experiment 1<br>
 
-Python code to track hand, compute length of middle finger, approximate z distance from Pi camera, vary an audio sine wave as a function of z:<br>
+Python code to track hand, compute length of middle finger, approximate z distance (cm) from Pi camera, vary an audio sine wave as a function of z:<br>
 
 <pre>
 import mediapipe as mp
@@ -53,7 +53,7 @@ import os
 x1 = 3.0
 y1 = 3.0
 x2 = 3.0
-z = 3.0
+z = 60.0        # initial value distance (cm) from camera to prevent thread from exit at start
 fps = 0.0
 
 sampling = 44100
@@ -64,12 +64,12 @@ def sound1():
 
   while True:
 
-        if z < 2.0:
+        if z < 20.0:
            break
 
         z_hold = z   # mediapipe hand tracking ~8Hz, python thread generates a sine wave as a function of z every 1 seconds 
 
-        data = numpy.sin(2 * numpy.pi * z_hold * numpy.arange(sampling) * 100 / sampling).astype(numpy.float16)
+        data = numpy.sin(2 * numpy.pi * z_hold * numpy.arange(sampling) * 10 / sampling).astype(numpy.float16)
         sound = pygame.mixer.Sound(data)
 
         sound.play().set_volume(0.05)   # set volume low
@@ -87,7 +87,7 @@ mp_hands = mp.solutions.hands
 
 cap = cv2.VideoCapture(0)
 
-with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
+with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, max_num_hands=1) as hands:
 
     while cap.isOpened():
 
@@ -117,13 +117,14 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) a
             x1 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP].x
             y1 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP].y
             x2 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x
-            z = 1/(x2-x1)
+            
+            z = int(numpy.round(10/(x2-x1)))            # assuming middle finger ~horizontal in front of camera
 
         time2 = time.time()
         fps = 1/(time2-time1)
         time1 = time2
 
-        string2 = str(numpy.round(x1,2)) + " " + str(numpy.round(y1,2)) + " " + str(numpy.round(numpy.abs(z),2)) + " " + str(numpy.round(fps,1))+" fps"
+        string2 = str(numpy.round(x1,2)) + " " + str(numpy.round(y1,2)) + " " + str(z) + "cm" + " " + str(numpy.round(fps,1))+" fps"
 
         image2 = cv2.putText(
                 img = image,
@@ -135,15 +136,15 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) a
                 thickness = 2
                 )
                                 
-        cv2.imshow('Hand Tracking (hand z < 1 or q key to exit)', image2)
+        cv2.imshow('Hand Tracking (hand z < 20cm or q key to exit)', image2)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
 
-        if  z < 2.0:
+        if  z < 20.0:
             break
 
-z = 0.5 # thread exit
+z = 1.0         # thread exits
 
 cap.release()
 cv2.destroyAllWindows()
