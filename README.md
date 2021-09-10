@@ -165,7 +165,13 @@ python3 rpi4-mediapipe-experiment.py<br>
 
 Explores depth perception using MediaPipe with two cameras.<br>
 
-Author used two identical usb webcams separated ~6cm to mimic human eyes. A Pi camera and a usb webcam should work but most likely have different field of views. MediaPipe hand tracking gives XY positions for a finger tip so computed z positions will vary. Not critical since this is an experiment to learn to compute Z from two different views.<br>
+<img src="handtrack2.gif" width="640">
+
+Two identical usb webcams separated ~6cm to mimic human eyes. In each opencv window, MediaPipe hand tracking gives XY positions of finger tip and computes Z positions. A small terminal window on the bottom prints (x,y,z) of finger tip from left view. Z positions are not scaled properly and dimensionless. Experiment works as Z is increasing as hand is moving away from both cameras.<br>
+
+A Pi camera and a usb webcam should work but most likely have different field of views so different computed Z positions. Not critical since this is an experiment to learn to compute Z from two different views.<br>
+
+Unlike Experiment 1, it is not dependent on a finger being horizontal to compute Z (but required two cameras).<br>
 
 Here is a python script for a camera.<br>
 
@@ -243,9 +249,9 @@ cap.release()
 cv2.destroyAllWindows()
 </pre>
 
-Name script "right-eye.py". Run "python3 right-eye.py" in a terminal. Let that camera be the right eye.<br>
+Name script "left-eye.py". Run "python3 left-eye.py" in a terminal. Let that camera be the left eye.<br>
 
-Next "cp right-eye.py left-eye.py" and change "cap = cv2.VideoCapture(2)". (not sure what happen to 1?) Run "python3 left-eye.py" in another terminal. Let that camera be the left eye.<br>
+Next "cp left-eye.py right-eye.py" and change "cap = cv2.VideoCapture(2)". (not sure what happen to 1?) Run "python3 right-eye.py" in another terminal. Let that camera be the right eye.<br>
 
 If working, press key "q" in opencv window to exit scripts. The next script will run both scripts and compute Z positions from XY positions.<br>
 
