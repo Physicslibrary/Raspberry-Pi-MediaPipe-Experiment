@@ -318,4 +318,8 @@ What is Pygame?<br>
 
 https://www.pygame.org/news
 
+Experiment 2 is based on the same concept "Basics" in OpenCV depthmap tutorial but using one x and x' for a finger tip and not computing a depth map from left and right images.<br>
+
+https://docs.opencv.org/master/dd/d53/tutorial_py_depthmap.html
+
 <br>Copyright (c) 2021 Hartwell Fong
