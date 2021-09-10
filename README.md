@@ -114,12 +114,13 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, m
                                         mp_drawing.DrawingSpec(color=(0, 0, 0), thickness=2, circle_radius=4),
                                         mp_drawing.DrawingSpec(color=(250, 50, 250), thickness=2, circle_radius=2)
                                          )
+                                         
             x1 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP].x
             y1 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP].y
             x2 = hand.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x
             
-            z = int(numpy.round(10/(x2-x1)))            # assuming middle finger ~horizontal in front of camera
-
+            z = int(numpy.round(10/(x2-x1+1e-09)))            # assuming middle finger ~horizontal in front of camera
+                                                              # 1e-09 prevents zero division 1/0 for improbable x2 = x1 = 0
         time2 = time.time()
         fps = 1/(time2-time1)
         time1 = time2
@@ -153,11 +154,137 @@ os.system("espeak 'stopping program'")
 
 </pre>
 
-Call python script rpi4-mediapipe-experiment.py.<br>
+Call python script "rpi4-mediapipe-experiment.py".<br>
 
 python3 rpi4-mediapipe-experiment.py<br>
 
 ## Exploring how Experiment 1 works
+
+
+## Experiment 2 - Depth perception
+
+Explores depth perception using MediaPipe with two cameras.<br>
+
+Author used two identical usb webcams separated ~6cm to mimic human eyes. A Pi camera and a usb webcam should work but most likely have different field of views. MediaPipe hand tracking gives XY positions for a finger tip so computed z positions will vary. Not critical since this is an experiment to learn to compute Z from two different views.<br>
+
+Here is a python script for a camera.<br>
+
+<pre>
+import numpy
+import mediapipe
+import cv2
+import time
+from sys import stdout
+
+x_index = 0
+y_index = 0
+
+mp_drawing = mediapipe.solutions.drawing_utils
+mp_hands = mediapipe.solutions.hands
+
+cap = cv2.VideoCapture(0)
+
+with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, max_num_hands=1) as hands:
+
+    while cap.isOpened():
+
+        time1 = time.time()
+
+        ret, frame = cap.read()
+        
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        image = cv2.flip(image, 1)
+        
+        image.flags.writeable = False
+
+        results = hands.process(image)  # mediapipe analyzes image
+        
+        image.flags.writeable = True
+        
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        
+        if results.multi_hand_landmarks:
+            for num, hand in enumerate(results.multi_hand_landmarks):
+                    
+                mp_drawing.draw_landmarks(image, hand, mp_hands.HAND_CONNECTIONS, 
+                                        mp_drawing.DrawingSpec(color=(0, 0, 0), thickness=2, circle_radius=4),
+                                        mp_drawing.DrawingSpec(color=(250, 50, 250), thickness=2, circle_radius=2)
+                                         )
+
+            x_index = hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].x
+            y_index = hand.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y
+         
+        print(x_index,y_index)
+        stdout.flush()          # keep pipe in next script moving
+
+        time2 = time.time()
+        fps = 1/(time2-time1)
+        time1 = time2
+
+        string = str(numpy.round(x_index,2)) + " " + str(numpy.round(y_index,2)) + " " + str(numpy.round(fps,1))+" fps"
+        
+        image = cv2.putText(
+                img = image,
+                text = string,
+                org = (100, 100),
+                fontFace = cv2.FONT_HERSHEY_DUPLEX,
+                fontScale = 1.0,
+                color = (0, 255, 0),
+                thickness = 2
+                )
+                                
+        cv2.imshow('Hand Tracking (q key to exit)', image)
+
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+
+cap.release()
+cv2.destroyAllWindows()
+</pre>
+
+Name script "right-eye.py". Run "python3 right-eye.py" in a terminal. Let that camera be the right eye.<br>
+
+Next "cp right-eye.py left-eye.py" and change "cap = cv2.VideoCapture(2)". (not sure what happen to 1?) Run "python3 left-eye.py" in another terminal. Let that camera be the left eye.<br>
+
+If working, press key "q" in opencv window to exit scripts. The next script will run both scripts and compute Z positions from XY positions.<br>
+
+<pre>
+import subprocess
+import threading
+import time
+import numpy
+
+x1 = "2.0"
+x2 = "1.0"
+z = 0.0
+
+proc = subprocess.Popen(["python3","left_eye.py"],stdout=subprocess.PIPE, text=True)
+
+proc2 = subprocess.Popen(["python3","right_eye.py"],stdout=subprocess.PIPE, text=True)
+
+def data1():
+	global x1
+	for line in proc.stdout:
+		x1 = line.strip()
+		x1 = x1.split()
+
+def data2():
+	global x2
+	for line in proc2.stdout:
+		x2 = line.strip()
+		x2 = x2.split()
+
+		if type(x1) == list:
+			z = numpy.abs(1/(float(x2[0])-float(x1[0])+1e-09))		
+			print(round(float(x1[0]),2),round(float(x1[1]),2),round(z,2))
+
+thread1 = threading.Thread(target=data1)
+thread1.start()
+
+thread2 = threading.Thread(target=data2)
+thread2.start()	
+</pre>
 
 ## Credits
 
